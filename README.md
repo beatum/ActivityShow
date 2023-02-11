@@ -5,7 +5,7 @@ this project build on JDK1.8
 
 ## Overviews：
 
-![Main](https://github.com/beatum/ng-web/blob/master/imgs/main.jpg)
+![Main](https://github.com/beatum/ActivityShow/blob/master/imgs/0.jpg)
 
 ## Demo:
 
