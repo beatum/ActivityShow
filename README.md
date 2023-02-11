@@ -1,6 +1,5 @@
 # Activity show component for OpenCV
-<img src="https://img.shields.io/github/package-json/v/beatum/ng-web" alt="Version"> <img src="https://img.shields.io/github/checks-status/beatum/ng-web/master"><img src="https://img.shields.io/github/license/beatum/ng-web"><img alt="GitHub all releases" src="https://img.shields.io/github/downloads/beatum/ng-web/total">
-
+<img src="https://img.shields.io/badge/version-1.0.1-green" />
 this project build on JDK1.8
 
 ## Overviews：
@@ -65,10 +64,6 @@ this project build on JDK1.8
         });
     }
 ```
-
-## Development server
-Run `ng serve` for a dev server. Navigate to `http://localhost:4200/`. The application will automatically reload if you change any of the source files.
-
 ## Build
 
 Run `mvn clean package`
