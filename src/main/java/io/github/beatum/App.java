@@ -30,9 +30,9 @@ public class App {
                     VideoCapture videoCapture2 = new VideoCapture();
                     VideoCapture videoCapture3 = new VideoCapture();
 
-                    Video viewer1 = new Video(videoCapture1, 0);
-                    Video viewer2 = new Video(videoCapture2, 1);
-                    Video viewer3 = new Video(videoCapture3, 2);
+                    Video viewer1 = new Video(videoCapture1, 700 ,0);
+                    Video viewer2 = new Video(videoCapture2, 700 , 1);
+                    Video viewer3 = new Video(videoCapture3, 700 ,2);
 
                     viewer1.setImageProcessingFilter(new IProcessCapture() {
                         public Mat process(Mat mat) {

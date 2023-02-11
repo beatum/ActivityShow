@@ -23,6 +23,8 @@ public class Video extends JPanel implements Runnable {
     //index of capture device
     int indexOfDevice = 0;
 
+    int apiPreference = 0;
+
     //Thread of capture
     private Thread threadOfCapture = null;
 
@@ -51,19 +53,20 @@ public class Video extends JPanel implements Runnable {
     private Video() {
     }
 
-    public Video(VideoCapture videoCapture, int index) {
+    public Video(VideoCapture videoCapture, int apiPreference  , int index) {
         this.setLayout(getDefaultLayout());
         this.videoCapture = videoCapture;
         this.indexOfDevice = index;
+        this.apiPreference = apiPreference;
         this.init();
     }
 
-    /*
+    /*mvn
      * initialization
      * */
     private void init() {
         if (!videoCapture.isOpened()) {
-            videoCapture.open(indexOfDevice);
+            videoCapture.open(indexOfDevice,apiPreference);
         }
     }
 
