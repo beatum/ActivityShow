@@ -18,12 +18,12 @@ import java.awt.image.BufferedImage;
 public class Video extends JPanel implements Runnable {
 
     //Video capture
-    VideoCapture videoCapture;
+    private VideoCapture videoCapture;
 
     //index of capture device
-    int indexOfDevice = 0;
+    private int indexOfDevice = 0;
 
-    int apiPreference = 0;
+    private int apiPreference = 0;
 
     //Thread of capture
     private Thread threadOfCapture = null;
@@ -43,6 +43,10 @@ public class Video extends JPanel implements Runnable {
         return imageProcessingFilter;
     }
 
+    public VideoCapture getVideoCapture() {
+        return videoCapture;
+    }
+
     public void setImageProcessingFilter(IProcessCapture imageProcessingFilter) {
         this.imageProcessingFilter = imageProcessingFilter;
     }
@@ -53,7 +57,7 @@ public class Video extends JPanel implements Runnable {
     private Video() {
     }
 
-    public Video(VideoCapture videoCapture, int apiPreference  , int index) {
+    public Video(VideoCapture videoCapture, int apiPreference, int index) {
         this.setLayout(getDefaultLayout());
         this.videoCapture = videoCapture;
         this.indexOfDevice = index;
@@ -65,8 +69,9 @@ public class Video extends JPanel implements Runnable {
      * initialization
      * */
     private void init() {
+        //videoCapture.set(6, VideoWriter.fourcc('M','J','P','G'));
         if (!videoCapture.isOpened()) {
-            videoCapture.open(indexOfDevice,apiPreference);
+            videoCapture.open(indexOfDevice, apiPreference);
         }
     }
 
@@ -93,29 +98,34 @@ public class Video extends JPanel implements Runnable {
     public void run() {
         Mat tempMap = new Mat();
         while (true) {
-            if (videoCapture.read(tempMap)) {
-
-                //Image processing filter
-                if (null != imageProcessingFilter) {
-                    tempMap = imageProcessingFilter.process(tempMap);
+            try {
+                if (videoCapture.read(tempMap)) {
+                    //Image processing filter
+                    if (null != imageProcessingFilter) {
+                        tempMap = imageProcessingFilter.process(tempMap);
+                    }
+                    Number w = getParent().getWidth();
+                    Number h = getParent().getHeight();
+                    Mat resizedMap = new Mat();
+                    Imgproc.resize(tempMap, resizedMap, new Size(w.doubleValue(), h.doubleValue()));
+                    bufferedImage = Commons.mat2BufferImage(resizedMap);
+                    repaint();
+                } else {
+                    try {
+                        Thread.sleep(50);
+                    } catch (InterruptedException ex) {
+                        this.stop();
+                        threadOfCapture = null;
+                    }
                 }
-
-                Number w = getParent().getWidth();
-                Number h = getParent().getHeight();
-
-                Mat resizedMap = new Mat();
-                Imgproc.resize(tempMap, resizedMap, new Size(w.doubleValue(), h.doubleValue()));
-                bufferedImage = Commons.mat2BufferImage(resizedMap);
-                repaint();
-
-            } else {
-                try {
-                    Thread.sleep(50);
-                } catch (InterruptedException ex) {
-                }
+            } catch (Exception ex) {
+                System.out.println("Error:" + ex.getMessage());
+                this.stop();
+                threadOfCapture = null;
             }
         }
     }
+
 
     /*
      * get default layout
