@@ -120,8 +120,8 @@ public class Video extends JPanel implements Runnable {
                 }
             } catch (Exception ex) {
                 System.out.println("Error:" + ex.getMessage());
-                this.stop();
-                threadOfCapture = null;
+                //this.stop();
+                //threadOfCapture = null;
             }
         }
     }

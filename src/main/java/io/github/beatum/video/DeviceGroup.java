@@ -64,7 +64,7 @@ public class DeviceGroup {
                 _devicePanel.add(viewer);
                 videoDevices.add(viewer);
             } else {
-                _devicePanel = new JPanel(new CardLayout());
+                _devicePanel = new JPanel();
                 _devicePanel.add(new Label("Empty:" + i));
             }
             devicePanels.add(_devicePanel);

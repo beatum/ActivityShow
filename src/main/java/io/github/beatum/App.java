@@ -14,7 +14,7 @@ import java.awt.*;
  */
 public class App {
     static {
-        System.load("D:\\software\\OpenCV – 4.6.0\\opencv\\build\\java\\x64\\opencv_java460.dll");
+        System.load("D:\\software\\OpenCV – 4.6.0\\opencv\\build\\java\\x86\\opencv_java460.dll");
 
     }
 
