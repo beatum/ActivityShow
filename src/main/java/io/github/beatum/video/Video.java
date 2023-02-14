@@ -3,6 +3,7 @@ package io.github.beatum.video;
 import io.github.beatum.utils.Commons;
 import org.opencv.core.Mat;
 import org.opencv.core.Size;
+import org.opencv.highgui.HighGui;
 import org.opencv.imgproc.Imgproc;
 import org.opencv.videoio.VideoCapture;
 
@@ -28,16 +29,11 @@ public class Video extends JPanel implements Runnable {
     //Thread of capture
     private Thread threadOfCapture = null;
 
-    //Buffered image
-    private BufferedImage bufferedImage;
+    //image for displaying
+    private Image image4Displaying;
 
-    public BufferedImage getBufferedImage() {
-        return bufferedImage;
-    }
-
-    public void setBufferedImage(BufferedImage bufferedImage) {
-        this.bufferedImage = bufferedImage;
-    }
+    //swap mat
+    private Mat resizedMap = new Mat();
 
     public IProcessCapture getImageProcessingFilter() {
         return imageProcessingFilter;
@@ -106,9 +102,9 @@ public class Video extends JPanel implements Runnable {
                     }
                     Number w = getParent().getWidth();
                     Number h = getParent().getHeight();
-                    Mat resizedMap = new Mat();
+
                     Imgproc.resize(tempMap, resizedMap, new Size(w.doubleValue(), h.doubleValue()));
-                    bufferedImage = Commons.mat2BufferImage(resizedMap);
+                    image4Displaying = HighGui.toBufferedImage(resizedMap);
                     repaint();
                 } else {
                     try {
@@ -120,8 +116,8 @@ public class Video extends JPanel implements Runnable {
                 }
             } catch (Exception ex) {
                 System.out.println("Error:" + ex.getMessage());
-                //this.stop();
-                //threadOfCapture = null;
+                this.stop();
+                threadOfCapture = null;
             }
         }
     }
@@ -142,6 +138,6 @@ public class Video extends JPanel implements Runnable {
      * */
     protected synchronized void paintComponent(Graphics g) {
         super.paintComponent(g);
-        g.drawImage(bufferedImage, 0, 0, this);
+        g.drawImage(image4Displaying, 0, 0, this);
     }
 }
