@@ -30,13 +30,9 @@ public class App {
                     JPanel container = new JPanel();
                     container.setLayout(new GridLayout(2, 3));
                     DeviceGroup group = new DeviceGroup(container, 6);
-
                     windows.add(container, 0);
                     windows.setVisible(true);
-
                     group.open();
-
-
                 } catch (Exception e) {
                     e.printStackTrace();
                 }

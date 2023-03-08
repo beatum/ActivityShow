@@ -1,15 +1,14 @@
 package io.github.beatum.video;
 
-import io.github.beatum.utils.Commons;
 import org.opencv.core.Mat;
 import org.opencv.core.Size;
-import org.opencv.highgui.HighGui;
 import org.opencv.imgproc.Imgproc;
 import org.opencv.videoio.VideoCapture;
 
 import javax.swing.*;
 import java.awt.*;
 import java.awt.image.BufferedImage;
+import java.awt.image.DataBufferByte;
 
 /**
  * @author Happy.He
@@ -30,10 +29,12 @@ public class Video extends JPanel implements Runnable {
     private Thread threadOfCapture = null;
 
     //image for displaying
-    private Image image4Displaying;
+    private BufferedImage image4Displaying;
 
     //swap mat
     private Mat resizedMap = new Mat();
+
+    private byte[] tempByteArray;
 
     public IProcessCapture getImageProcessingFilter() {
         return imageProcessingFilter;
@@ -104,20 +105,27 @@ public class Video extends JPanel implements Runnable {
                     Number h = getParent().getHeight();
 
                     Imgproc.resize(tempMap, resizedMap, new Size(w.doubleValue(), h.doubleValue()));
-                    image4Displaying = HighGui.toBufferedImage(resizedMap);
+
+                    int type = 10;
+                    if (resizedMap.channels() > 1) {
+                        type = 5;
+                    }
+                    int bufferSize = resizedMap.channels() * resizedMap.cols() * resizedMap.rows();
+
+                    tempByteArray = new byte[bufferSize];
+                    resizedMap.get(0, 0, tempByteArray);
+                    image4Displaying = new BufferedImage(resizedMap.cols(), resizedMap.rows(), type);
+                    byte[] targetPixels = ((DataBufferByte) image4Displaying.getRaster().getDataBuffer()).getData();
+                    System.arraycopy(tempByteArray, 0, targetPixels, 0, tempByteArray.length);
                     repaint();
                 } else {
                     try {
                         Thread.sleep(50);
                     } catch (InterruptedException ex) {
-                        this.stop();
-                        threadOfCapture = null;
                     }
                 }
             } catch (Exception ex) {
                 System.out.println("Error:" + ex.getMessage());
-                this.stop();
-                threadOfCapture = null;
             }
         }
     }
@@ -136,8 +144,14 @@ public class Video extends JPanel implements Runnable {
     /*
      * paint component
      * */
+    //synchronized
     protected synchronized void paintComponent(Graphics g) {
-        super.paintComponent(g);
-        g.drawImage(image4Displaying, 0, 0, this);
+        //super.paintComponent(g);
+        if (null != image4Displaying) {
+            g.drawImage(image4Displaying, 0, 0, this);
+            image4Displaying.flush();
+            image4Displaying = null;
+            tempByteArray = null;
+        }
     }
 }
