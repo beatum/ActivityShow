@@ -118,6 +118,7 @@ public class Video extends JPanel implements Runnable {
                     byte[] targetPixels = ((DataBufferByte) image4Displaying.getRaster().getDataBuffer()).getData();
                     System.arraycopy(tempByteArray, 0, targetPixels, 0, tempByteArray.length);
                     repaint();
+
                 } else {
                     try {
                         Thread.sleep(50);
@@ -125,7 +126,7 @@ public class Video extends JPanel implements Runnable {
                     }
                 }
             } catch (Exception ex) {
-                System.out.println("Error:" + ex.getMessage());
+                //System.out.println("Error:" + ex.getMessage());
             }
         }
     }
@@ -149,9 +150,6 @@ public class Video extends JPanel implements Runnable {
         //super.paintComponent(g);
         if (null != image4Displaying) {
             g.drawImage(image4Displaying, 0, 0, this);
-            image4Displaying.flush();
-            image4Displaying = null;
-            tempByteArray = null;
         }
     }
 }
