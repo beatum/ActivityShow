@@ -114,8 +114,10 @@ public class Video extends JPanel implements Runnable {
                     }
                     int bufferSize = resizedMap.channels() * resizedMap.cols() * resizedMap.rows();
 
+                    tempByteArray = null;
                     tempByteArray = new byte[bufferSize];
                     resizedMap.get(0, 0, tempByteArray);
+                    image4Displaying = null;
                     image4Displaying = new BufferedImage(resizedMap.cols(), resizedMap.rows(), type);
                     targetPixels = ((DataBufferByte) image4Displaying.getRaster().getDataBuffer()).getData();
                     System.arraycopy(tempByteArray, 0, targetPixels, 0, tempByteArray.length);
