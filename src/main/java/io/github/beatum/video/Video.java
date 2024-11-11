@@ -4,6 +4,7 @@ import org.opencv.core.Mat;
 import org.opencv.core.Size;
 import org.opencv.imgproc.Imgproc;
 import org.opencv.videoio.VideoCapture;
+import org.opencv.videoio.Videoio;
 
 import javax.swing.*;
 import java.awt.*;
@@ -34,6 +35,11 @@ public class Video extends JPanel implements Runnable {
     //swap mat
     private Mat resizedMap = new Mat();
 
+    //width of frame.
+    private int frameWidth = 1366;
+    //height of frame.
+    private int frameHeight = 768;
+
     private byte[] tempByteArray;
 
     byte[] targetPixels = null;
@@ -53,6 +59,7 @@ public class Video extends JPanel implements Runnable {
     //Image processing event
     private IProcessCapture imageProcessingFilter = null;
 
+
     private Video() {
     }
 
@@ -61,16 +68,11 @@ public class Video extends JPanel implements Runnable {
         this.videoCapture = videoCapture;
         this.indexOfDevice = index;
         this.apiPreference = apiPreference;
-        this.init();
-    }
 
-    /*mvn
-     * initialization
-     * */
-    private void init() {
-        //videoCapture.set(6, VideoWriter.fourcc('M','J','P','G'));
         if (!videoCapture.isOpened()) {
             videoCapture.open(indexOfDevice, apiPreference);
+            videoCapture.set(Videoio.CAP_PROP_FRAME_WIDTH, frameWidth);
+            videoCapture.set(Videoio.CAP_PROP_FRAME_HEIGHT, frameHeight);
         }
     }
 
@@ -135,7 +137,6 @@ public class Video extends JPanel implements Runnable {
         }
     }
 
-
     /*
      * get default layout
      */
@@ -159,4 +160,21 @@ public class Video extends JPanel implements Runnable {
             targetPixels = null;
         }
     }
+
+    public int getFrameWidth() {
+        return frameWidth;
+    }
+
+    public void setFrameWidth(int frameWidth) {
+        this.frameWidth = frameWidth;
+    }
+
+    public int getFrameHeight() {
+        return frameHeight;
+    }
+
+    public void setFrameHeight(int frameHeight) {
+        this.frameHeight = frameHeight;
+    }
+
 }
