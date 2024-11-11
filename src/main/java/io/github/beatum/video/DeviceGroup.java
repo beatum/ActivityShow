@@ -1,6 +1,7 @@
 package io.github.beatum.video;
 
 import org.opencv.videoio.VideoCapture;
+import org.opencv.videoio.Videoio;
 
 import javax.swing.*;
 import java.awt.*;
@@ -13,7 +14,7 @@ import java.util.List;
  * @date 2/13/2023 8:51 AM
  */
 public class DeviceGroup {
-    private int apiPreference = 700;
+    private int apiPreference = Videoio.CAP_DSHOW ;
     private Integer quantityOfVideoDevice = 1;
     private List<Video> videoDevices = new LinkedList<Video>();
     private List<JPanel> devicePanels = new LinkedList<JPanel>();
