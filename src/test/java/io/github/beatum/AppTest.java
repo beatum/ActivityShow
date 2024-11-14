@@ -14,7 +14,7 @@ import java.awt.image.BufferedImage;
 public class AppTest extends TestCase {
 
     static {
-        System.load("D:\\software\\OpenCV4.6.0\\opencv\\build\\java\\x64\\opencv_java460.dll");
+        //System.load("D:\\software\\OpenCV4.6.0\\opencv\\build\\java\\x64\\opencv_java460.dll");
     }
 
     public AppTest(String testName) {
