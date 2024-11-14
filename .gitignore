@@ -23,6 +23,10 @@
 .idea/**/uiDesigner.xml
 .idea/**/dbnavigator.xml
 
+
+.idea/inspectionProfiles/
+
+
 # Gradle
 .idea/**/gradle.xml
 .idea/**/libraries
