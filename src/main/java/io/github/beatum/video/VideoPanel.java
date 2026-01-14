@@ -12,35 +12,29 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBufferByte;
-import java.nio.file.Path;
+import java.io.Closeable;
+import java.io.File;
 
 /**
- * A Swing {@link JPanel} that continuously grabs frames from an OpenCV {@link VideoCapture}
+ * A Swing JPanel that continuously grabs frames from an OpenCV VideoCapture
  * and renders them on-screen.
  *
- * <h2>Key Features</h2>
- * <ul>
- *   <li>Runs capture on a dedicated background thread</li>
- *   <li>Paints on Swing EDT, uses double-buffering to reduce flicker</li>
- *   <li>Supports an optional frame processing filter ({@link IProcessCapture})</li>
- *   <li>Provides thread-safe snapshot APIs (for saving images without touching VideoCapture)</li>
- * </ul>
+ * Key Features:
+ * - Runs capture on a dedicated background thread
+ * - Paints on Swing EDT, uses double-buffering to reduce flicker
+ * - Supports an optional frame processing filter (IProcessCapture)
+ * - Provides thread-safe snapshot APIs (clone last captured frame)
  *
- * <h2>Threading Model</h2>
- * <ul>
- *   <li>Only the capture thread calls {@link VideoCapture#read(Mat)}.</li>
- *   <li>The EDT calls {@link #paintComponent(Graphics)}.</li>
- *   <li>Snapshots clone the last captured frame under a lock.</li>
- * </ul>
+ * Note: OpenCV frames are typically BGR (not RGB). This class uses
+ * BufferedImage.TYPE_3BYTE_BGR for display.
  *
- * <p><b>Note:</b> OpenCV frames are typically BGR (not RGB). This class uses
- * {@link BufferedImage#TYPE_3BYTE_BGR} for display.</p>
+ * Java Compatibility: Java 6+ (also works on Java 8)
  *
  * @author Happy.He
- * @version 2.1
+ * @version 2.1-J6
  * @since 2023-02-10
  */
-public class VideoPanel extends JPanel implements Runnable, AutoCloseable {
+public class VideoPanel extends JPanel implements Runnable, Closeable {
 
     // -------------------- Capture configuration --------------------
 
@@ -62,7 +56,6 @@ public class VideoPanel extends JPanel implements Runnable, AutoCloseable {
     /**
      * Optional capture loop throttle in milliseconds.
      * 0 means no artificial delay.
-     * Useful if you want to reduce CPU usage.
      */
     private int captureDelayMs = 0;
 
@@ -113,7 +106,7 @@ public class VideoPanel extends JPanel implements Runnable, AutoCloseable {
     }
 
     /**
-     * Creates a panel that displays frames from the given {@link VideoCapture}.
+     * Creates a panel that displays frames from the given VideoCapture.
      *
      * @param videoCapture capture instance (can be unopened initially)
      * @param apiPreference backend preference (0 = CAP_ANY)
@@ -154,6 +147,13 @@ public class VideoPanel extends JPanel implements Runnable, AutoCloseable {
     public synchronized void stop() {
         running = false;
 
+        // Try to release early to unblock read() on some backends
+        if (videoCapture != null && videoCapture.isOpened()) {
+            try {
+                videoCapture.release();
+            } catch (Exception ignored) {}
+        }
+
         if (captureThread != null) {
             captureThread.interrupt();
             try {
@@ -164,27 +164,17 @@ public class VideoPanel extends JPanel implements Runnable, AutoCloseable {
                 captureThread = null;
             }
         }
-
-        // Release capture
-        if (videoCapture != null && videoCapture.isOpened()) {
-            videoCapture.release();
-        }
     }
 
     /**
-     * Same as {@link #stop()}.
-     * Enables try-with-resources usage.
+     * Java 6 compatible close() (Closeable).
      */
-    @Override
     public void close() {
         stop();
+
         // Release Mats
-        try {
-            resizedMat.release();
-        } catch (Exception ignored) {}
-        try {
-            convertedMat.release();
-        } catch (Exception ignored) {}
+        try { resizedMat.release(); } catch (Exception ignored) {}
+        try { convertedMat.release(); } catch (Exception ignored) {}
         try {
             synchronized (frameLock) {
                 lastFrame.release();
@@ -194,7 +184,6 @@ public class VideoPanel extends JPanel implements Runnable, AutoCloseable {
 
     /**
      * Sets a per-frame processing filter.
-     * If your filter creates a new Mat, prefer returning the same Mat or ensure it manages memory well.
      *
      * @param filter filter implementation or null to disable
      */
@@ -244,6 +233,7 @@ public class VideoPanel extends JPanel implements Runnable, AutoCloseable {
 
     /**
      * Adds optional sleep between frames to reduce CPU usage.
+     *
      * @param captureDelayMs delay in ms (0 = no delay)
      */
     public void setCaptureDelayMs(int captureDelayMs) {
@@ -254,7 +244,7 @@ public class VideoPanel extends JPanel implements Runnable, AutoCloseable {
 
     /**
      * Returns a clone of the latest captured/processed frame (not resized).
-     * <p>Caller owns the returned Mat and must {@link Mat#release()} it when done.</p>
+     * Caller owns the returned Mat and must release it when done.
      *
      * @return cloned snapshot Mat; may be empty if no frames yet
      */
@@ -267,22 +257,31 @@ public class VideoPanel extends JPanel implements Runnable, AutoCloseable {
     /**
      * Saves a snapshot (latest captured/processed frame, not resized) to a file using OpenCV.
      *
-     * @param file file path
+     * @param file output file
      * @return true if saved successfully
      */
-    public boolean saveSnapshot(Path file) {
+    public boolean saveSnapshot(File file) {
+        if (file == null) return false;
+
         Mat snap = snapshotFrame();
         try {
             if (snap.empty()) return false;
-            return Imgcodecs.imwrite(file.toString(), snap);
+            return Imgcodecs.imwrite(file.getAbsolutePath(), snap);
         } finally {
             snap.release();
         }
     }
 
+    /**
+     * Convenience overload for Java 6 callers.
+     */
+    public boolean saveSnapshot(String filePath) {
+        if (filePath == null) return false;
+        return saveSnapshot(new File(filePath));
+    }
+
     // -------------------- Capture Loop --------------------
 
-    @Override
     public void run() {
         final Mat frame = new Mat();
 
@@ -304,23 +303,21 @@ public class VideoPanel extends JPanel implements Runnable, AutoCloseable {
                         processed = filter.process(frame);
                         if (processed == null) processed = frame; // safety fallback
                     } catch (Exception ignored) {
-                        processed = frame; // keep running even if filter fails
+                        processed = frame;
                     }
                 }
 
-                // Keep a copy for snapshot (thread-safe).
-                // This stores the "processed" frame (before resizing).
+                // Keep a copy for snapshot (thread-safe). Store "processed" frame (before resizing).
                 synchronized (frameLock) {
                     processed.copyTo(lastFrame);
                 }
 
-                // Determine panel size (avoid getParent(); panel itself knows its size)
+                // Determine panel size
                 int w = Math.max(1, getWidth());
                 int h = Math.max(1, getHeight());
 
                 // Convert channels if needed:
                 // - OpenCV commonly uses BGR (3 channels) or BGRA (4 channels)
-                // - BufferedImage supports 1ch gray or 3ch BGR easily
                 Mat toDisplay = processed;
                 int ch = processed.channels();
 
@@ -330,16 +327,10 @@ public class VideoPanel extends JPanel implements Runnable, AutoCloseable {
                     toDisplay = convertedMat;
                     ch = 3;
                 } else if (ch != 1 && ch != 3) {
-                    // Fallback: convert to BGR for unusual formats
-                    try {
-                        Imgproc.cvtColor(processed, convertedMat, Imgproc.COLOR_GRAY2BGR);
-                        toDisplay = convertedMat;
-                        ch = 3;
-                    } catch (Exception ignored) {
-                        // If conversion fails, try to display original anyway
-                        toDisplay = processed;
-                        ch = Math.min(3, Math.max(1, processed.channels()));
-                    }
+                    // Unusual formats: try to keep original, or skip frame safely
+                    // For safety, we'll just skip this frame:
+                    sleepQuietly(5);
+                    continue;
                 }
 
                 // Resize to panel size
@@ -356,15 +347,18 @@ public class VideoPanel extends JPanel implements Runnable, AutoCloseable {
                 // Copy bytes from Mat to BufferedImage raster
                 int required = resizedMat.channels() * resizedMat.cols() * resizedMat.rows();
                 if (imagePixels == null || imagePixels.length < required) {
-                    // Rebuild buffer in rare cases
                     img = ensureImageBuffer(w, h, imageType);
                 }
-                resizedMat.get(0, 0, imagePixels);
 
+                resizedMat.get(0, 0, imagePixels);
                 imageForDisplay = img;
 
-                // Repaint safely on EDT
-                SwingUtilities.invokeLater(this::repaint);
+                // Java 6 compatible invokeLater (no method reference)
+                SwingUtilities.invokeLater(new Runnable() {
+                    public void run() {
+                        repaint();
+                    }
+                });
 
                 // Optional throttle
                 if (captureDelayMs > 0) {
@@ -383,7 +377,6 @@ public class VideoPanel extends JPanel implements Runnable, AutoCloseable {
     /**
      * Paints the latest frame. Called on Swing EDT.
      */
-    @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
 
@@ -391,7 +384,6 @@ public class VideoPanel extends JPanel implements Runnable, AutoCloseable {
         if (img != null) {
             g.drawImage(img, 0, 0, this);
         } else {
-            // Optional: draw "No Signal"
             g.setColor(Color.DARK_GRAY);
             g.drawString("No Signal", 10, 20);
         }
