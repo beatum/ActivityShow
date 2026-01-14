@@ -7,6 +7,7 @@ import org.opencv.videoio.Videoio;
 
 import javax.swing.*;
 import java.awt.*;
+import java.io.Closeable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -14,25 +15,23 @@ import java.util.List;
 /**
  * Manages a group of video capture viewers and their corresponding UI panels.
  *
- * <p>Responsibilities:
- * <ul>
- *   <li>Create N capture viewers (device index 0..N-1)</li>
- *   <li>Probe whether each device is available</li>
- *   <li>Add either a viewer panel or an "Empty" placeholder into the provided container</li>
- *   <li>Start/stop/release all devices safely</li>
- * </ul>
+ * Responsibilities:
+ * - Create N capture viewers (device index 0..N-1)
+ * - Probe whether each device is available
+ * - Add either a viewer panel or an "Empty" placeholder into the provided container
+ * - Start/stop/release all devices safely
  *
- * <p>Threading:
- * <ul>
- *   <li>UI modifications are performed on Swing's EDT when possible.</li>
- *   <li>Each viewer runs its own capture thread.</li>
- * </ul>
+ * Threading:
+ * - UI modifications should be performed on Swing's EDT.
+ * - Each viewer runs its own capture thread.
+ *
+ * Java Compatibility: Java 6+ (also works on Java 8)
  *
  * @author Happy.He
- * @version 2.0
+ * @version 2.0-J6
  * @since 2023-02-13
  */
-public class DeviceGroup implements AutoCloseable {
+public class DeviceGroup implements Closeable {
 
     /** OpenCV backend API preference (default: DirectShow on Windows). */
     private int apiPreference = Videoio.CAP_DSHOW;
@@ -44,10 +43,10 @@ public class DeviceGroup implements AutoCloseable {
     private final JComponent container;
 
     /** Viewer components for available devices only. */
-    private final List<VideoPanel> viewers = new ArrayList<>();
+    private final List<VideoPanel> viewers = new ArrayList<VideoPanel>();
 
     /** UI panels for each index (available or placeholder). Size = deviceCount. */
-    private final List<JPanel> devicePanels = new ArrayList<>();
+    private final List<JPanel> devicePanels = new ArrayList<JPanel>();
 
     /**
      * Create a new DeviceGroup and initialize UI components.
@@ -102,21 +101,27 @@ public class DeviceGroup implements AutoCloseable {
     /**
      * Initialize the device panels and viewers.
      *
-     * <p>For each device index:
-     * <ul>
-     *   <li>Try to open + read a test frame</li>
-     *   <li>If successful: create a VideoPanel and embed it in a panel</li>
-     *   <li>If failed: create a placeholder panel showing "Empty: i"</li>
-     * </ul>
+     * For each device index:
+     * - Try to open + read a test frame
+     * - If successful: create a VideoPanel and embed it in a panel
+     * - If failed: create a placeholder panel showing "Empty: i"
      */
     private void init() {
+        // If you want to be extra safe, ensure this runs on EDT:
+        if (!SwingUtilities.isEventDispatchThread()) {
+            SwingUtilities.invokeLater(new Runnable() {
+                public void run() {
+                    init();
+                }
+            });
+            return;
+        }
+
         // Clear old state (if re-initialization ever happens)
         viewers.clear();
         devicePanels.clear();
         container.removeAll();
 
-        // Ensure container layout has enough cells; common usage is GridLayout(rows, cols)
-        // but we don't enforce layout type here.
         for (int i = 0; i < deviceCount; i++) {
             JPanel panelForIndex;
 
@@ -135,7 +140,6 @@ public class DeviceGroup implements AutoCloseable {
             } else {
                 // Clean up capture if probe failed
                 cap.release();
-
                 panelForIndex = buildPlaceholderPanel(i);
             }
 
@@ -163,7 +167,6 @@ public class DeviceGroup implements AutoCloseable {
             if (!cap.open(index, apiPreference)) {
                 return false;
             }
-            // Read a test frame (more reliable than grab() alone on some backends)
             Mat test = new Mat();
             boolean ok = cap.read(test) && !test.empty();
             test.release();
@@ -190,9 +193,8 @@ public class DeviceGroup implements AutoCloseable {
      * Starts capture for all available viewers.
      */
     public void openAll() {
-        // Start viewers; each viewer manages its own capture thread.
-        for (VideoPanel viewer : viewers) {
-            viewer.start();
+        for (int i = 0; i < viewers.size(); i++) {
+            viewers.get(i).start();
         }
     }
 
@@ -200,8 +202,8 @@ public class DeviceGroup implements AutoCloseable {
      * Stops all viewers but does not remove UI panels.
      */
     public void stopAll() {
-        for (VideoPanel viewer : viewers) {
-            viewer.stop();
+        for (int i = 0; i < viewers.size(); i++) {
+            viewers.get(i).stop();
         }
     }
 
@@ -209,16 +211,14 @@ public class DeviceGroup implements AutoCloseable {
      * Stops and releases all resources (recommended).
      */
     public void releaseAll() {
-        for (VideoPanel viewer : viewers) {
-            // VideoPanel.close() calls stop() and releases capture
-            viewer.close();
+        for (int i = 0; i < viewers.size(); i++) {
+            viewers.get(i).close(); // your VideoPanel.close() is Java 6 compatible now
         }
     }
 
     /**
-     * Same as {@link #releaseAll()} to support try-with-resources.
+     * Same as releaseAll(). (Java 6 doesn't have try-with-resources, but close() still useful.)
      */
-    @Override
     public void close() {
         releaseAll();
     }
